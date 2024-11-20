@@ -13,7 +13,7 @@ from pyspark.ml.regression import LinearRegression
 spark = SparkSession.builder.getOrCreate()
 data = spark.read.csv("gold1.csv", header = True)
 
-#Clear dataframe
+#Clear dataframe 
 data = data.na.drop()
 data = data.dropDuplicates()
 
@@ -35,14 +35,43 @@ train_data, test_data = data_ready.randomSplit([0.8,0.2],seed=5)
 lr = LinearRegression(featuresCol="features",labelCol="label")
 lr_model = lr.fit(train_data)
 
+
+
 #Predictions
 test_predictions = lr_model.transform(test_data)
+test_predictions
 test_predictions.select("features","label","prediction").show()
 
 # Evaluation
 test_evaluation = lr_model.evaluate(test_data)
-print("root mean square Error",test_evaluation.meanSquaredError)
-print("mean absolute error", test_evaluation.meanAbsoluteError)
+print(".")
+print("Erreur quadratique moyenne (MSE)",test_evaluation.meanSquaredError)
+print("Erreur absolue moyenne (MAE)", test_evaluation.meanAbsoluteError)
+print("Coefficient de Détermination (R2)", test_evaluation.r2)
+print(".")
+
+#Transformer Données en format panda
+train_panda = train_data.select("features","label").toPandas()
+test_panda = test_data.select("features","label").toPandas()
+
+#Creation du graphique
+plt.figure(figsize=(10,6))
+
+train_panda["Date"] = train_panda["features"].apply(lambda x: x[0])
+test_panda["Date"] = test_panda["features"].apply(lambda x: x[0])
+
+plt.scatter(train_panda["Date"],train_panda["label"], color='blue', label = "Données d'entrainement")
+
+plt.scatter(test_panda["Date"],test_panda["label"], color="green", label = "Données de test")
+
+x_line = np.linspace(data.select("Date2").rdd.min()[0],data.select("Date2").rdd.max()[0],100)
+y_line = lr_model.coefficients[0]* x_line + lr_model.intercept
+
+plt.plot(x_line,y_line, color = "red",label= "Droite de régression")
+
+plt.show()  
+
+
 
 
 
